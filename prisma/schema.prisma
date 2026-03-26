@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id           String     @id @default(cuid())
+  name         String
+  code         String     @unique
+  emailDomains String
+  active       Boolean    @default(true)
+  locations    Location[]
+  tickets      Ticket[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Location {
+  id                   String   @id @default(cuid())
+  clientId             String
+  client               Client   @relation(fields: [clientId], references: [id])
+  externalLocationCode String?
+  storeName            String
+  address1             String
+  city                 String
+  state                String
+  zip                  String?
+  phone                String?
+  notes                String?
+  tickets              Ticket[]
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  role         String
+  tickets      Ticket[] @relation("AssignedInternalUser")
+  notes        TicketInternalNote[]
+  quotes       TicketQuote[]
+  assignments  TicketAssignment[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Contractor {
+  id             String               @id @default(cuid())
+  companyName    String
+  primaryContact String?
+  phone          String?
+  email          String?
+  coverageStates String?
+  trades         String?
+  active         Boolean              @default(true)
+  rating         Float?
+  notes          String?
+  paymentTerms   String?
+  tickets        Ticket[]
+  documents      ContractorDocument[]
+  assignments    TicketAssignment[]
+  quotes         TicketQuote[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+}
+
+model ContractorDocument {
+  id             String         @id @default(cuid())
+  contractorId   String
+  contractor     Contractor     @relation(fields: [contractorId], references: [id])
+  documentType   String
+  status         String
+  effectiveDate  DateTime?
+  expirationDate DateTime?
+  storagePath    String
+  notes          String?
+  createdAt      DateTime       @default(now())
+}
+
+model SlaPolicy {
+  id                    String   @id @default(cuid())
+  name                  String
+  firstResponseMinutes  Int
+  updateDueMinutes      Int
+  completionTargetHours Int
+  escalationRulesJson   String
+  tickets               Ticket[]
+}
+
+model Ticket {
+  id                          String               @id @default(cuid())
+  ticketNumber                String               @unique
+  clientId                    String
+  locationId                  String?
+  externalWorkOrder           String?
+  sapNumber                   String?
+  subject                     String
+  issueSummary                String
+  issueType                   String?
+  priority                    String               @default("MEDIUM")
+  status                      String               @default("NEW_INTAKE")
+  sourceChannel               String               @default("gmail")
+  gmailThreadId               String?
+  gmailMessageIdFirst         String?
+  openedAt                    DateTime?
+  firstSeenAt                 DateTime             @default(now())
+  dueAt                       DateTime?
+  slaPolicyId                 String?
+  assignedInternalUserId      String?
+  assignedContractorId        String?
+  blockedReason               String?
+  holdReason                  String?
+  completionReadyAt           DateTime?
+  accountingReadyAt           DateTime?
+  closedAt                    DateTime?
+  latestAiSummary             String?
+  latestRecommendationSummary String?
+  invoiceStatus               String?
+  quoteStatus                 String?
+  agingHours                  Int                  @default(0)
+  client                      Client               @relation(fields: [clientId], references: [id])
+  location                    Location?            @relation(fields: [locationId], references: [id])
+  slaPolicy                   SlaPolicy?           @relation(fields: [slaPolicyId], references: [id])
+  assignedInternalUser        User?                @relation("AssignedInternalUser", fields: [assignedInternalUserId], references: [id])
+  assignedContractor          Contractor?          @relation(fields: [assignedContractorId], references: [id])
+  messages                    TicketMessage[]
+  internalNotes               TicketInternalNote[]
+  attachments                 TicketAttachment[]
+  assignments                 TicketAssignment[]
+  quotes                      TicketQuote[]
+  invoices                    TicketInvoice[]
+  statusHistory               TicketStatusHistory[]
+  aiSummaries                 AiSummary[]
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+}
+
+model TicketMessage {
+  id                 String           @id @default(cuid())
+  ticketId           String
+  direction          String
+  gmailMessageId     String?
+  gmailThreadId      String?
+  sender             String
+  toRecipients       String
+  ccRecipients       String?
+  subject            String
+  bodyText           String
+  bodyHtml           String?
+  sentAt             DateTime?
+  receivedAt         DateTime?
+  deliveryStatus     String?
+  parsedTicketNumber String?
+  ticket             Ticket           @relation(fields: [ticketId], references: [id])
+  attachments        TicketAttachment[]
+  createdAt          DateTime         @default(now())
+}
+
+model TicketInternalNote {
+  id           String   @id @default(cuid())
+  ticketId     String
+  authorUserId String
+  noteText     String
+  noteType     String
+  pinned       Boolean  @default(false)
+  ticket       Ticket   @relation(fields: [ticketId], references: [id])
+  author       User     @relation(fields: [authorUserId], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model TicketAttachment {
+  id              String          @id @default(cuid())
+  ticketId        String
+  ticketMessageId String?
+  kind            String
+  subtype         String?
+  filename        String
+  mimeType        String
+  storagePath     String
+  source          String
+  ticket          Ticket          @relation(fields: [ticketId], references: [id])
+  ticketMessage   TicketMessage?  @relation(fields: [ticketMessageId], references: [id])
+  createdAt       DateTime        @default(now())
+}
+
+model TicketAssignment {
+  id               String      @id @default(cuid())
+  ticketId         String
+  contractorId     String
+  assignedByUserId String?
+  assignmentStatus String
+  assignedAt       DateTime    @default(now())
+  acceptedAt       DateTime?
+  declinedAt       DateTime?
+  scheduledFor     DateTime?
+  scopeNotes       String?
+  ticket           Ticket      @relation(fields: [ticketId], references: [id])
+  contractor       Contractor  @relation(fields: [contractorId], references: [id])
+  assignedBy       User?       @relation(fields: [assignedByUserId], references: [id])
+}
+
+model TicketQuote {
+  id              String      @id @default(cuid())
+  ticketId        String
+  contractorId    String?
+  quoteNumber     String      @unique
+  status          String      @default("DRAFT")
+  scopeSummary    String
+  costAmount      Float
+  sellAmount      Float
+  marginAmount    Float
+  versionNumber   Int         @default(1)
+  createdByUserId String?
+  approvedAt      DateTime?
+  ticket          Ticket      @relation(fields: [ticketId], references: [id])
+  contractor      Contractor? @relation(fields: [contractorId], references: [id])
+  createdBy       User?       @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime    @default(now())
+}
+
+model TicketInvoice {
+  id             String        @id @default(cuid())
+  ticketId       String
+  invoiceNumber  String        @unique
+  status         String        @default("DRAFT")
+  clientAmount   Float
+  contractorCost Float
+  marginAmount   Float
+  sentAt         DateTime?
+  paidAt         DateTime?
+  ticket         Ticket        @relation(fields: [ticketId], references: [id])
+  createdAt      DateTime      @default(now())
+}
+
+model TicketStatusHistory {
+  id              String       @id @default(cuid())
+  ticketId        String
+  fromStatus      String?
+  toStatus        String
+  changedByUserId String?
+  reason          String?
+  ticket          Ticket       @relation(fields: [ticketId], references: [id])
+  changedAt       DateTime     @default(now())
+}
+
+model AiSummary {
+  id        String   @id @default(cuid())
+  ticketId  String
+  kind      String
+  content   String
+  modelName String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  createdAt DateTime @default(now())
+}
