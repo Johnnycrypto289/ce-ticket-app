@@ -1,10 +1,11 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  experimental: {
-    typedRoutes: true,
-  },
+  typedRoutes: true,
   allowedDevOrigins: ['192.168.5.153'],
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 export default nextConfig;
