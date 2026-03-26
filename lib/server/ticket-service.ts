@@ -12,7 +12,15 @@ export async function getDashboardMetrics() {
 }
 
 export async function listTickets() {
-  return prisma.ticket.findMany({ orderBy: { updatedAt: 'desc' }, include: { client: true, location: true, assignedContractor: true } });
+  return prisma.ticket.findMany({
+    orderBy: { updatedAt: 'desc' },
+    include: {
+      client: true,
+      location: true,
+      assignedContractor: true,
+      assignedInternalUser: true,
+    },
+  });
 }
 
 export async function getTicket(ticketId: string) {

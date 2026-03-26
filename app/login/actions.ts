@@ -8,6 +8,6 @@ export async function loginAction(formData: FormData) {
   if (!email) throw new Error('Email required');
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new Error('User not found in seed data');
-  await setSession(email);
+  await setSession(user.email);
   redirect('/');
 }
